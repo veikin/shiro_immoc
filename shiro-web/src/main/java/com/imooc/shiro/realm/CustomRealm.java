@@ -1,5 +1,7 @@
 package com.imooc.shiro.realm;
 
+import com.imooc.dao.UserDao;
+import com.imooc.domain.User;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -10,19 +12,16 @@ import org.apache.shiro.crypto.hash.Md5Hash;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.util.ByteSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class CustomRealm extends AuthorizingRealm {
 
-    Map<String, String> userMap = new HashMap<String, String>();
-
-    {
-        userMap.put("Mark", "283538989cef48f3d7d8a1c1bdf2008f");
-    }
+    @Autowired
+    private UserDao userDao;
 
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
 
@@ -31,7 +30,7 @@ public class CustomRealm extends AuthorizingRealm {
         // 从数据库或缓存中获取角色数据
         Set<String> roles = getRolesByUsername(username);
 
-        Set<String> permissions = getPermissionsByRoles();
+        Set<String> permissions = getPermissionsByUsername(username);
 
         SimpleAuthorizationInfo simpleAuthorizationInfo = new SimpleAuthorizationInfo();
         simpleAuthorizationInfo.setRoles(roles);
@@ -58,27 +57,28 @@ public class CustomRealm extends AuthorizingRealm {
         return authenticationInfo;
     }
 
-    private Set<String> getPermissionsByRoles() {
-        Set<String> permissions = new HashSet<String>();
-        permissions.add("user:add");
-        permissions.add("user:delete");
-        return permissions;
-    }
-
-    private Set<String> getRolesByUsername(String username) {
-        Set<String> roles = new HashSet<String>();
-        roles.add("admin");
-        roles.add("user");
-        return roles;
-    }
-
     /**
      * 模拟数据库
      * @param username
      * @return
      */
     private String getPasswordByUsername(String username) {
-        return userMap.get(username);
+        User user = userDao.getUserByUserName(username);
+        if (user != null) {
+            return user.getPassword();
+        }
+
+        return null;
+    }
+
+    private Set<String> getRolesByUsername(String username) {
+        List<String> list = userDao.queryRolesByUsername(username);
+        return new HashSet<String>(list);
+    }
+
+    private Set<String> getPermissionsByUsername(String username) {
+        List<String> list = userDao.queryPermissionsByUsername(username);
+        return new HashSet<String>(list);
     }
 
     public static void main(String[] args) {

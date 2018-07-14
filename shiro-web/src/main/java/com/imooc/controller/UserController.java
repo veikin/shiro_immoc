@@ -24,6 +24,7 @@ public class UserController {
                 user.getPassword());
 
         try {
+            token.setRememberMe(user.isRememberMe());
             subject.login(token);
         } catch (AuthenticationException e) {
             return e.getMessage();
